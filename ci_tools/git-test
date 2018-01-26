@@ -64,8 +64,12 @@ cmd_test()
 
     # stash changes and push the stash to the remote testing branch
     git stash push --keep-index --message "test $randname"
-    git push $remote_server stash:refs/heads/$branch_name
-    git stash pop
+
+    { # try pushing
+        git push $remote_server stash:refs/heads/$branch_name
+    } || { # catch errors and unstash
+        git stash pop
+    }
 }
 
 cmd_test $1
