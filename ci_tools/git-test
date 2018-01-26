@@ -1,0 +1,71 @@
+#!/bin/sh -e
+#
+# git-test plugin for remote testing inside a properly configured CI system.
+#
+# Copyright (c) 2018, Andrea Cervesato <andrea.cervesato@mailbox.org>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#     * Neither the name of the <organization> nor the
+#       names of its contributors may be used to endorse or promote products
+#       derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# initialize USERNAME with your preferred name
+USERNAME="testername"
+TESTING_BRANCH_PREFIX="testing/$USERNAME"
+
+usage()
+{
+    echo "usage: git test <remote tag>"
+    echo
+}
+
+cmd_test()
+{
+    local remote_server="$1"
+    local randname=""
+    local remote_branch=""
+    local branch_name=""
+
+    if [ $# -ne 1 ]; then
+        usage
+        exit 1
+    fi
+
+    # create the testing branch name
+    randname=$(cat /dev/urandom | tr -cd 'a-f0-9' | head -c 32)
+    branch_name="$TESTING_BRANCH_PREFIX/$randname"
+
+    # if remote branch already exists, remove it
+    remote_branch="$(git ls-remote --heads origin $branch_name)"
+
+    if [ ! -z "$remote_branch" ]; then
+        echo "remote testing branch already exists..."
+        echo "removing remote testing branch \"$remote_branch\"..."
+        git push -d "$remote_server" "$remote_branch"
+    fi
+
+    # stash changes and push the stash to the remote testing branch
+    git stash push --keep-index --message "test $randname"
+    git push $remote_server stash:refs/heads/$branch_name
+    git stash pop
+}
+
+cmd_test $1
