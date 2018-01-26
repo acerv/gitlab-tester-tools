@@ -54,7 +54,7 @@ cmd_test()
     branch_name="$TESTING_BRANCH_PREFIX/$randname"
 
     # if remote branch already exists, remove it
-    remote_branch="$(git ls-remote --heads origin $branch_name)"
+    remote_branch="$(git ls-remote --heads $remote_server $branch_name)"
 
     if [ ! -z "$remote_branch" ]; then
         echo "remote testing branch already exists..."
